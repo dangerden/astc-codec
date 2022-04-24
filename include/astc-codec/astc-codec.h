@@ -70,6 +70,9 @@ bool ASTCDecompressToRGBA(const uint8_t* astc_data, size_t astc_data_size,
                           uint8_t* out_buffer, size_t out_buffer_size,
                           size_t out_buffer_stride);
 
+bool ASTCSampleToRGBA(uint8_t* astc_data, size_t width, size_t height, FootprintType footprint,
+                      size_t x, size_t y, uint32_t* pix);
+
 }  // namespace astc_codec
 
 #endif  // ASTC_CODEC_ASTC_CODEC_H_

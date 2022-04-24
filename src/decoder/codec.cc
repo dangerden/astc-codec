@@ -129,4 +129,56 @@ bool ASTCDecompressToRGBA(const uint8_t* astc_data, size_t astc_data_size,
                            out_buffer_stride);
 }
 
+// TODO minimum safety checks (none?)
+bool ASTCSampleToRGBA(uint8_t* astc_data, size_t width, size_t height, 
+                      FootprintType footprint_tp,
+                      size_t x, size_t y, uint32_t* pix) {
+  auto footprint = Footprint::FromFootprintType(footprint_tp);
+  if (!footprint) {
+    return false;
+  }
+
+  const size_t block_width = footprint.value().Width();
+  const size_t block_height = footprint.value().Height();
+
+  const size_t blocks_wide = (width + block_width - 1) / block_width;
+
+  base::UInt128 block;
+
+  const size_t block_x = x / block_width;
+  const size_t block_y = y / block_height;
+  const size_t block_index = block_y * blocks_wide + block_x;
+  int i = block_index * PhysicalASTCBlock::kSizeInBytes;
+  memcpy(&block, astc_data + i, sizeof(block));
+
+  PhysicalASTCBlock physical_block(block);
+  auto lb = UnpackLogicalBlock(footprint.value(), physical_block);
+  if (!lb) {
+    return false;
+  }
+
+  LogicalASTCBlock logical_block = lb.value();
+  
+  //const RgbaColor c = logical_block.ColorAt(x%block_width, y%block_height);
+
+  for (size_t y = 0; y < block_height; ++y) {
+    const size_t py = block_height * block_y + y;
+
+    for (size_t x = 0; x < block_width; ++x) {
+      const size_t px = block_width * block_x + x;
+
+      // Skip out of bounds.
+      if (px >= width || py >= height) {
+        continue;
+      }
+
+      const RgbaColor c = logical_block.ColorAt(x, y);
+      pix[y*block_height+x] = c[0] | (c[1] << 8) | (c[2] << 16) | (c[3] << 24);
+    }
+  }
+
+  return true;
+}
+
+
 }  // namespace astc_codec
